@@ -1,11 +1,4 @@
 <?php
-/**
- * Zend Framework (http://framework.zend.com/)
- *
- * @link      http://github.com/zendframework/ZendSkeletonApplication for the canonical source repository
- * @copyright Copyright (c) 2005-2014 Zend Technologies USA Inc. (http://www.zend.com)
- * @license   http://framework.zend.com/license/new-bsd New BSD License
- */
 
 namespace Application\Controller;
 
@@ -21,7 +14,7 @@ class IndexController extends AbstractActionController
      * @var array
      * список тэгов для парсера, которые нужно разбирать
      */
-    protected $targetTags = array(
+    protected $targetTags = [
         //'<a',
         '<article',
         '<b',
@@ -64,32 +57,32 @@ class IndexController extends AbstractActionController
         '<tt',
         '<ul',
         '<u',
-    );
+    ];
 
     /**
      * @var array
      * список атрибутов тэгов для парсера
      */
-    protected $attributeList = array(
-        'class' => null,
-        'hidden' => null,
-        'id' => null,
-        'style' => null,
-        'title' => null,
-        'value' => null,
-    );
+    protected $attributeList = [
+        'class'     => null,
+        'hidden'    => null,
+        'id'        => null,
+        'style'     => null,
+        'title'     => null,
+        'value'     => null,
+    ];
 
     /**
      * @var array
      *  массив, в котором каждый элемент содержит: название тэга, его атрибуты со значениями и текстовую информацию
      */
-    protected $textContent = array();
+    protected $textContent = [];
 
     /**
      * @var array
      * массив со всеми тэгами IMG
      */
-    protected $imgContent = array();
+    protected $imgContent = [];
 
     /**
      * @var string
@@ -122,8 +115,8 @@ class IndexController extends AbstractActionController
             $currentLine = strrchr($this->pageContent, '<');
 
             // Удаляем из конца исходной строки ту ее часть ( $currentLine ), которую выделили в предыдущем шаге
-            $posCurrentLine = strrpos($this->pageContent, $currentLine);
-            $this->pageContent = trim(substr($this->pageContent, 0, $posCurrentLine));
+            $posCurrentLine     = strrpos($this->pageContent, $currentLine);
+            $this->pageContent  = trim(substr($this->pageContent, 0, $posCurrentLine));
 
             // Если в начале строки НЕТ '</' (т.е. это не закрывающий тэг) - делаем разбор этой строки, иначе - продолжаем разбор исходной страницы
             if (false === (strpos($currentLine, '</'))) {
@@ -141,7 +134,7 @@ class IndexController extends AbstractActionController
                         $currentTag = substr($currentLine, 1, (strlen($tagName) - 1));
 
                         // Выделяем и записываем текст, следующий за закрывающей скобкой '>'
-                        $currentText = substr(strrchr($currentLine, '>'), 1);
+                        $currentText = trim(preg_replace('/\s{2,}/', ' ',substr(strrchr($currentLine, '>'), 1)));
 
                         // Выделяем и записываем список всех атрибутов и их значений, удаляя из текущей строки название тэга и текст, который был после закрывающей скобки '>'
                         $currentAttributes = substr($currentLine, (strlen($tagName) + 1), (strlen($currentLine) - strlen($currentTag) - strlen($currentText) - 3));
@@ -150,8 +143,8 @@ class IndexController extends AbstractActionController
                         $listSymbols = str_split($currentAttributes);
 
                         // Находим позиции, на которых находятся символы '=' и '"'
-                        $posEqual = array_keys($listSymbols, '=');
-                        $posQuotes = array_keys($listSymbols, '"');
+                        $posEqual   = array_keys($listSymbols, '=');
+                        $posQuotes  = array_keys($listSymbols, '"');
 
                         $attributeList = $this->attributeList;
 
@@ -165,18 +158,18 @@ class IndexController extends AbstractActionController
                             while (count($posEqual) && (count($posQuotes) > 1)) {
 
                                 // Извлекаем позицию 1-го символа '=', а также 1-го и 2-го символов '"'
-                                $currentEqual = array_shift($posEqual);
+                                $currentEqual   = array_shift($posEqual);
                                 $currentQuotes1 = array_shift($posQuotes);
                                 // Если мы в цикле в 1-й раз, присваиваем переменной prevQuotes2 = 0, иначе присваиваем ей позицию 2-й кавычки из предыдущего шага +1
-                                $prevQuotes2 = $itFirstAttr ? 0 : ($currentQuotes2 + 1);
+                                $prevQuotes2    = $itFirstAttr ? 0 : ($currentQuotes2 + 1);
                                 $currentQuotes2 = array_shift($posQuotes);
 
                                 // Устанавливаем стартовую позицию для поиска названия атрибута
                                 $startPosAttrName = $prevQuotes2;
 
                                 // Выделяем и записываем название атрибута и его значение
-                                $currentAttr = trim(substr($currentAttributes, $startPosAttrName, ($currentEqual - $startPosAttrName)));
-                                $currentAttrValue = trim(substr($currentAttributes, ($currentQuotes1 + 1), ($currentQuotes2 - $currentQuotes1 - 1)));
+                                $currentAttr        = trim(substr($currentAttributes, $startPosAttrName, ($currentEqual - $startPosAttrName)));
+                                $currentAttrValue   = trim(substr($currentAttributes, ($currentQuotes1 + 1), ($currentQuotes2 - $currentQuotes1 - 1)));
 
                                 // Если название атрибута есть в списке интересующих нас атрибутов, записываем его со значением
                                 if (array_key_exists($currentAttr, $this->attributeList)) {
@@ -189,11 +182,11 @@ class IndexController extends AbstractActionController
                         }
 
                         // Записываем спарсенную текстовую информацию
-                        $this->textContent[] = array(
-                            'tagName' => $currentTag,
+                        $this->textContent[] = [
+                            'tagName'       => $currentTag,
                             'attributeList' => $attributeList,
-                            'text'    => $currentText,
-                        );
+                            'text'          => $currentText,
+                        ];
                     }
 
                     // Если это картинка - записываем данные
