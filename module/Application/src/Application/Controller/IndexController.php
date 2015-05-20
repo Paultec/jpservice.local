@@ -4,12 +4,18 @@ namespace Application\Controller;
 
 use Zend\Mvc\Controller\AbstractActionController;
 use Zend\View\Model\ViewModel;
-use Zend\Http\Client as HttpClient;
+use Zend\View\Model\JsonModel;
 use Zend\Dom\Document;
-use Zend\Dom\Document\Query;
+
+use Application\Service\PreParser;
 
 class IndexController extends AbstractActionController
 {
+    /**
+     * Application\Service\PreParser
+     */
+    protected $preParser;
+
     /**
      * @var array
      * список тэгов для парсера, которые нужно разбирать
@@ -89,121 +95,123 @@ class IndexController extends AbstractActionController
      */
     protected $pageContent = '';
 
+    public function __construct(PreParser $preParser)
+    {
+        $this->preParser = $preParser;
+    }
+
     public function indexAction()
     {
-        $client = new HttpClient();
-        $client->setAdapter('Zend\Http\Client\Adapter\Curl');
+        $request = $this->getRequest();
 
-        //$targetPage = 'http://www.grandua.com.ua/p/2342-platie_fantaziya_molochnoie.html';
-        //$targetPage = 'http://www.crumina.ua/product/391/%D0%92%D0%B5%D1%81%D0%BD%D0%B0-%D0%9E%D1%81%D0%B5%D0%BD%D1%8C/%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C-7062-%D0%B4%D0%B6%D0%B8%D0%BD%D1%81/';
-        //$targetPage = 'http://100chehlov.com.ua/dlya-noutbukov/sumki-dlya-noutbukov-ogio/sumka-dlya-noutbuka-ogio-17-renegade-rss-black-pindot-111071-317-detail';
-        //$targetPage = 'http://klevo.com.ua/product/udilische-spinningovoe-abu-garcia-rod-vendetta-703-5_15-spin-sht.html';
-        //$targetPage = 'http://dieline-genius.com/customize/3/';
-        //$targetPage = 'http://www.6pm.com/crocs-crocband-jaunt-navy';
-        $targetPage = 'http://group.aliexpress.com/259417012-1443375516-detail.html';
+        if ($request->isXmlHttpRequest()) {
+            $url = $request->getPost('url');
 
-        $client->setUri($targetPage);
+            $this->pageContent = $this->preParser->getStructure($url);
 
-        $result = $client->send();
+            // Начало парсера html-страницы
+            while ($this->pageContent) {
 
-        $this->pageContent = $result->getBody();
+                // Разбираем страницу на отдельные строки, используя '<' как разделитель, начиная с конца
+                $currentLine = strrchr($this->pageContent, '<');
 
-        // Начало парсера html-страницы
-        while ($this->pageContent) {
+                // Удаляем из конца исходной строки ту ее часть ( $currentLine ), которую выделили в предыдущем шаге
+                $posCurrentLine     = strrpos($this->pageContent, $currentLine);
+                $this->pageContent  = trim(substr($this->pageContent, 0, $posCurrentLine));
 
-            // Разбираем страницу на отдельные строки, используя '<' как разделитель, начиная с конца
-            $currentLine = strrchr($this->pageContent, '<');
+                // Если в начале строки НЕТ '</' (т.е. это не закрывающий тэг) - делаем разбор этой строки, иначе - продолжаем разбор исходной страницы
+                if (false === (strpos($currentLine, '</'))) {
 
-            // Удаляем из конца исходной строки ту ее часть ( $currentLine ), которую выделили в предыдущем шаге
-            $posCurrentLine     = strrpos($this->pageContent, $currentLine);
-            $this->pageContent  = trim(substr($this->pageContent, 0, $posCurrentLine));
+                    // Выбираем из начала строки название текущего тэга
+                    $tagName = strstr($currentLine, ' ', true);
 
-            // Если в начале строки НЕТ '</' (т.е. это не закрывающий тэг) - делаем разбор этой строки, иначе - продолжаем разбор исходной страницы
-            if (false === (strpos($currentLine, '</'))) {
+                    // Если этот тэг входит в список тэгов для парсинга - продолжаем разбор строки, иначе - переходим к продолжению разбора страницы
+                    if (in_array($tagName, $this->targetTags)) {
 
-                // Выбираем из начала строки название текущего тэга
-                $tagName = strstr($currentLine, ' ', true);
+                        // Если после закрывающей скобки есть какой-либо текст, начинаем разбор текущей строки, иначе - переходим к проверке тэга на изображение
+                        if (strrchr($currentLine, '>') !== '>') {
 
-                // Если этот тэг входит в список тэгов для парсинга - продолжаем разбор строки, иначе - переходим к продолжению разбора страницы
-                if (in_array($tagName, $this->targetTags)) {
+                            // Выделяем и записываем название текущего тэга
+                            $currentTag = substr($currentLine, 1, (strlen($tagName) - 1));
 
-                    // Если после закрывающей скобки есть какой-либо текст, начинаем разбор текущей строки, иначе - переходим к проверке тэга на изображение
-                    if (strrchr($currentLine, '>') !== '>') {
+                            // Выделяем и записываем текст, следующий за закрывающей скобкой '>'
+                            $currentText = trim(preg_replace('/\s{2,}/', ' ', substr(strrchr($currentLine, '>'), 1)));
 
-                        // Выделяем и записываем название текущего тэга
-                        $currentTag = substr($currentLine, 1, (strlen($tagName) - 1));
+                            // Выделяем и записываем список всех атрибутов и их значений, удаляя из текущей строки название тэга и текст, который был после закрывающей скобки '>'
+                            $currentAttributes = substr($currentLine, (strlen($tagName) + 1), (strlen($currentLine) - strlen($currentTag) - strlen($currentText) - 3));
 
-                        // Выделяем и записываем текст, следующий за закрывающей скобкой '>'
-                        $currentText = trim(preg_replace('/\s{2,}/', ' ',substr(strrchr($currentLine, '>'), 1)));
+                            // Записываем все символы из списка атрибутов и их значений
+                            $listSymbols = str_split($currentAttributes);
 
-                        // Выделяем и записываем список всех атрибутов и их значений, удаляя из текущей строки название тэга и текст, который был после закрывающей скобки '>'
-                        $currentAttributes = substr($currentLine, (strlen($tagName) + 1), (strlen($currentLine) - strlen($currentTag) - strlen($currentText) - 3));
+                            // Находим позиции, на которых находятся символы '=' и '"'
+                            $posEqual   = array_keys($listSymbols, '=');
+                            $posQuotes  = array_keys($listSymbols, '"');
 
-                        // Записываем все символы из списка атрибутов и их значений
-                        $listSymbols = str_split($currentAttributes);
+                            $attributeList = $this->attributeList;
 
-                        // Находим позиции, на которых находятся символы '=' и '"'
-                        $posEqual   = array_keys($listSymbols, '=');
-                        $posQuotes  = array_keys($listSymbols, '"');
+                            // Если в списке атрибутов есть хотя бы один символ '=' и более одного символа '"', начинаем искать названия атрибутов и их значения
+                            if ((count($posEqual) > 0) && (count($posQuotes) > 1)) {
 
-                        $attributeList = $this->attributeList;
+                                // Устанавливаем флаг первого прохода по списку атрибутов
+                                $itFirstAttr = true;
 
-                        // Если в списке атрибутов есть хотя бы один символ '=' и более одного символа '"', начинаем искать названия атрибутов и их значения
-                        if ((count($posEqual) > 0) && (count($posQuotes) > 1)) {
+                                $currentQuotes1 = null;
+                                $currentQuotes2 = null;
 
-                            // Устанавливаем флаг первого прохода по списку атрибутов
-                            $itFirstAttr = true;
+                                // Продолжаем искать названия атрибутов и их значения, пока в списке атрибутов есть хотя бы один символ '=' и более одного символа '"'
+                                while (count($posEqual) && (count($posQuotes) > 1)) {
 
-                            // Продолжаем искать названия атрибутов и их значения, пока в списке атрибутов есть хотя бы один символ '=' и более одного символа '"'
-                            while (count($posEqual) && (count($posQuotes) > 1)) {
+                                    // Извлекаем позицию 1-го символа '=', а также 1-го и 2-го символов '"'
+                                    $currentEqual   = array_shift($posEqual);
+                                    $currentQuotes1 = array_shift($posQuotes);
+                                    // Если мы в цикле в 1-й раз, присваиваем переменной prevQuotes2 = 0, иначе присваиваем ей позицию 2-й кавычки из предыдущего шага +1
+                                    $prevQuotes2    = $itFirstAttr ? 0 : ($currentQuotes2 + 1);
+                                    $currentQuotes2 = array_shift($posQuotes);
 
-                                // Извлекаем позицию 1-го символа '=', а также 1-го и 2-го символов '"'
-                                $currentEqual   = array_shift($posEqual);
-                                $currentQuotes1 = array_shift($posQuotes);
-                                // Если мы в цикле в 1-й раз, присваиваем переменной prevQuotes2 = 0, иначе присваиваем ей позицию 2-й кавычки из предыдущего шага +1
-                                $prevQuotes2    = $itFirstAttr ? 0 : ($currentQuotes2 + 1);
-                                $currentQuotes2 = array_shift($posQuotes);
+                                    // Устанавливаем стартовую позицию для поиска названия атрибута
+                                    $startPosAttrName = $prevQuotes2;
 
-                                // Устанавливаем стартовую позицию для поиска названия атрибута
-                                $startPosAttrName = $prevQuotes2;
+                                    // Выделяем и записываем название атрибута и его значение
+                                    $currentAttr        = trim(substr($currentAttributes, $startPosAttrName, ($currentEqual - $startPosAttrName)));
+                                    $currentAttrValue   = trim(substr($currentAttributes, ($currentQuotes1 + 1), ($currentQuotes2 - $currentQuotes1 - 1)));
 
-                                // Выделяем и записываем название атрибута и его значение
-                                $currentAttr        = trim(substr($currentAttributes, $startPosAttrName, ($currentEqual - $startPosAttrName)));
-                                $currentAttrValue   = trim(substr($currentAttributes, ($currentQuotes1 + 1), ($currentQuotes2 - $currentQuotes1 - 1)));
+                                    // Если название атрибута есть в списке интересующих нас атрибутов, записываем его со значением
+                                    if (array_key_exists($currentAttr, $this->attributeList)) {
+                                        $attributeList[$currentAttr] = $currentAttrValue;
+                                    }
 
-                                // Если название атрибута есть в списке интересующих нас атрибутов, записываем его со значением
-                                if (array_key_exists($currentAttr, $this->attributeList)) {
-                                    $attributeList[$currentAttr] = $currentAttrValue;
+                                    // Переключаем флаг и продолжаем разбор строки списка атрибутов
+                                    $itFirstAttr = false;
                                 }
-
-                                // Переключаем флаг и продолжаем разбор строки списка атрибутов
-                                $itFirstAttr = false;
                             }
+
+                            // Записываем спарсенную текстовую информацию
+                            $this->textContent[] = [
+                                'tagName'       => $currentTag,
+                                'attributeList' => $attributeList,
+                                'text'          => $currentText,
+                            ];
                         }
 
-                        // Записываем спарсенную текстовую информацию
-                        $this->textContent[] = [
-                            'tagName'       => $currentTag,
-                            'attributeList' => $attributeList,
-                            'text'          => $currentText,
-                        ];
-                    }
-
-                    // Если это картинка - записываем данные
-                    if ($tagName === '<img') {
-                        $this->imgContent[] = $currentLine;
+                        // Если это картинка - записываем данные
+                        if ($tagName === '<img') {
+                            $this->imgContent[] = $currentLine;
+                        }
                     }
                 }
             }
+
+            // Реверсируем массив, т.к. разбор начинали с конца страницы
+            $this->textContent = array_reverse($this->textContent);
+
+            // Конец парсера html-страницы
+
+            return new JsonModel([
+                'textContent' => $this->textContent,
+                'imgContent'  => $this->imgContent
+            ]);
         }
 
-        // Реверсируем массив, т.к. разбор начинали с конца страницы
-        $this->textContent = array_reverse($this->textContent);
-
-        // Конец парсера html-страницы
-
-        var_dump($this->textContent);
-        //var_dump($this->imgContent);
 
         return new ViewModel();
     }

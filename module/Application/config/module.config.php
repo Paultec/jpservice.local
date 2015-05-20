@@ -1,5 +1,9 @@
 <?php
 
+use Application\Controller\IndexController;
+use Application\Factory\Controller\IndexControllerFactory;
+use Application\Service\PreParser;
+
 return [
     'router' => [
         'routes' => [
@@ -8,8 +12,7 @@ return [
                 'options' => [
                     'route'    => '/',
                     'defaults' => [
-                        '__NAMESPACE__' => 'Application\Controller',
-                        'controller'    => 'Index',
+                        'controller'    => IndexController::class,
                         'action'        => 'index',
                     ],
                 ],
@@ -19,8 +22,7 @@ return [
                 'options' => [
                     'route'    => '/app',
                     'defaults' => [
-                        '__NAMESPACE__' => 'Application\Controller',
-                        'controller'    => 'Index',
+                        'controller'    => IndexController::class,
                         'action'        => 'index',
                     ],
                 ],
@@ -34,8 +36,7 @@ return [
                                 'action'     => '[a-zA-Z][a-zA-Z0-9_-]*',
                             ],
                             'defaults' => [
-                                '__NAMESPACE__' => 'Application\Controller',
-                                'controller'    => 'Index',
+                                'controller'    => IndexController::class,
                                 'action'        => 'index',
                             ],
                         ],
@@ -52,6 +53,9 @@ return [
         'aliases' => [
             'translator' => 'MvcTranslator',
         ],
+        'invokables' => [
+            'PreParser' => PreParser::class,
+        ],
     ],
     'translator' => [
         'locale' => 'en_US',
@@ -64,8 +68,8 @@ return [
         ],
     ],
     'controllers' => [
-        'invokables' => [
-            'Application\Controller\Index' => 'Application\Controller\IndexController'
+        'factories' => [
+            IndexController::class => IndexControllerFactory::class
         ],
     ],
     'view_manager' => [
@@ -82,6 +86,9 @@ return [
         ],
         'template_path_stack' => [
             __DIR__ . '/../view',
+        ],
+        'strategies' => [
+            'ViewJsonStrategy'
         ],
     ],
     // Placeholder for console routes
