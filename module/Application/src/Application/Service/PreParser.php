@@ -29,14 +29,4 @@ class PreParser
 
         return $data->getBody();
     }
-
-    public function getContent()
-    {
-
-    }
-
-    public function getImages()
-    {
-
-    }
 }

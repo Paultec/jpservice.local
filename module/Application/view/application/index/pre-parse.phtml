@@ -1,67 +1,28 @@
 <div class="row">
     <script src="/js/TweenMax.min.js"></script>
     <section class="col col-md-12">
-        <div class="panel panel-danger informer">
-            <div class="panel-heading">
-                <h3 class="panel-title">Beta работает только с сайтами:</h3>
-            </div>
-            <div class="panel-body">
-                <ul class="list-unstyled">
-                    <li>http://aliexpress.com</li>
-                    <li>http://www.amazon.com</li>
-                    <li>http://www.ebay.com</li>
-                </ul>
-            </div>
+        <div class="informer bg-danger">
+            <h3>Beta работает только с сайтами:</h3>
+            <ul class="list-unstyled">
+                <li>http://aliexpress.com</li>
+                <li>http://www.amazon.com</li>
+                <li>http://www.ebay.com</li>
+            </ul>
         </div>
 
-        <div class="form">
-            <form action="<?php echo $this->url('app/default', ['action' => 'pre-parse']); ?>" method="post">
-                <div class="col col-sm-6 col-sm-offset-2">
-                    <div class="form-group">
-                        <input class="target" name="target" value="parse" type="hidden">
-                        <label for="uri" class="label label-default sr-only">Адрес сайта</label>
-                        <input id="uri" class="form-control" type="search" name="uri" placeholder="Адрес сайта" required>
-                    </div>
+        <div class="form text-center">
+            <form action="<?php echo $this->url('app/default', ['action' => 'pre-parse']); ?>" method="post" class="form-inline">
+                <div class="form-group">
+                    <input class="target" name="target" value="pre-parse" type="hidden">
+                    <label for="uri" class="label label-default sr-only">Адрес сайта</label>
+                    <input id="uri" class="form-control" type="search" name="uri" placeholder="Адрес сайта" required>
                 </div>
-                <div class="col col-sm-2">
-                    <button class="btn btn-primary submit-btn" type="submit">Готово</button>
-                </div>
-
+                <button class="btn btn-default submit-btn" type="submit">Готово</button>
             </form>
         </div>
-        <div class="result hide">
-            <div class="col col-md-12">
-                <div class="jumbotron product clearfix">
-                    <div class="product-image first-column col col-sm-2">
-                        <p>
-                            <a href="#">
-                                <img class="img-responsive center-block" alt="" width="300px">
-                            </a>
-                        </p>
-                    </div>
-
-                    <div class="second-column col col-sm-7">
-                        <div class="product-description">
-                            <h2 class="product-name"><a href="#"></a></h2>
-                            <h3>Описание:</h3>
-                            <p></p>
-                        </div>
-                    </div>
-
-                    <div class="product-info col col-sm-3">
-                        <p class="product-price">Цена: <span></span></p>
-                        <p class="source">
-                            <a target="_blank">Источник</a>
-                        </p>
-                    </div>
-
-                    <div class="third-column">
-                        <div class="product-control">
-                            <a href="javascript:void(0)" class="btn btn-success">Добавить</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="result">
+            <ul class="text-content list-unstyled"></ul>
+            <ul class="image-content list-unstyled"></ul>
         </div>
     </section>
 

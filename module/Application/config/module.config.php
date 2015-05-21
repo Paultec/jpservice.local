@@ -3,6 +3,7 @@
 use Application\Controller\IndexController;
 use Application\Factory\Controller\IndexControllerFactory;
 use Application\Service\PreParser;
+use Application\Service\Parser;
 
 return [
     'router' => [
@@ -17,7 +18,7 @@ return [
                     ],
                 ],
             ],
-            'application' => [
+            'app' => [
                 'type'    => 'Literal',
                 'options' => [
                     'route'    => '/app',
@@ -55,6 +56,7 @@ return [
         ],
         'invokables' => [
             'PreParser' => PreParser::class,
+            'Parser'    => Parser::class
         ],
     ],
     'translator' => [

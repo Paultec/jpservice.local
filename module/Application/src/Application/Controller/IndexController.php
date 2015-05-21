@@ -8,20 +8,26 @@ use Zend\View\Model\JsonModel;
 use Zend\Dom\Document;
 
 use Application\Service\PreParser;
+use Application\Service\Parser;
 
 class IndexController extends AbstractActionController
 {
     /**
      * Application\Service\PreParser
      */
-    protected $preParser;
+    protected $preParser = null;
+
+    /**
+     * Application\Service\Parser
+     */
+    protected $parser = null;
 
     /**
      * @var array
-     * список тэгов для парсера, которые нужно разбирать
+     * список тэгов для парсера, которые нужно
+     * разбирать
      */
-    protected $targetTags = [
-        //'<a',
+    protected $targetTags = array(
         '<article',
         '<b',
         '<big',
@@ -47,7 +53,6 @@ class IndexController extends AbstractActionController
         '<option',
         '<p',
         '<plaintext',
-        //'<param',
         '<pre',
         '<summary',
         '<span',
@@ -63,44 +68,68 @@ class IndexController extends AbstractActionController
         '<tt',
         '<ul',
         '<u',
-    ];
+    );
 
     /**
      * @var array
      * список атрибутов тэгов для парсера
      */
-    protected $attributeList = [
-        'class'     => null,
-        'hidden'    => null,
-        'id'        => null,
-        'style'     => null,
-        'title'     => null,
-        'value'     => null,
-    ];
+    protected $attributeList = array(
+        'class' => null,
+        'hidden' => null,
+        'id' => null,
+        'style' => null,
+        'title' => null,
+        'value' => null,
+    );
 
     /**
      * @var array
-     *  массив, в котором каждый элемент содержит: название тэга, его атрибуты со значениями и текстовую информацию
+     *  массив, в котором каждый элемент содержит:
+     * название тэга, его атрибуты со значениями и
+     * текстовую информацию
      */
-    protected $textContent = [];
+    protected $textContent = array(
+        
+    );
 
     /**
      * @var array
      * массив со всеми тэгами IMG
      */
-    protected $imgContent = [];
+    protected $imgContent = array(
+        
+    );
 
     /**
      * @var string
      */
     protected $pageContent = '';
 
-    public function __construct(PreParser $preParser)
+    public function __construct(PreParser $preParser, Parser $parser)
     {
         $this->preParser = $preParser;
+        $this->parser    = $parser;
     }
 
     public function indexAction()
+    {
+        $request = $this->getRequest();
+
+        if ($request->isXmlHttpRequest()) {
+            $url = $request->getPost('url');
+
+            $data = $this->parser->parse($url);
+
+            return new JsonModel([
+                'data' => $data
+            ]);
+        }
+
+        return new ViewModel();
+    }
+
+    public function preParseAction()
     {
         $request = $this->getRequest();
 

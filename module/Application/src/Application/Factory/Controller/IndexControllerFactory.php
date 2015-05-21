@@ -18,7 +18,8 @@ class IndexControllerFactory implements FactoryInterface
     {
         $serviceLocator = $serviceLocator->getServiceLocator();
         $preParser      = $serviceLocator->get('PreParser');
+        $parser         = $serviceLocator->get('Parser');
 
-        return new IndexController($preParser);
+        return new IndexController($preParser, $parser);
     }
 }
